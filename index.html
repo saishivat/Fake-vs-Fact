@@ -1,12 +1,8 @@
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Fake vs Fact Template</title>
+  <title>Fake vs Fact / Then vs Now Generator</title>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     body {
@@ -99,30 +95,35 @@
 </head>
 <body>
 
-  <h1>Fake vs Fact Image Template</h1>
+  <h1>Fake vs Fact / Then vs Now Image Template</h1>
 
-  <label class="custom-upload">Upload Fake Image
-    <input type="file" id="fakeInput" accept="image/*" onchange="handleUpload('fakeInput', true, 'fakeUploaded')">
+  <label class="custom-upload">Upload Left Image
+    <input type="file" id="leftInput" accept="image/*" onchange="handleUpload('leftInput', true, 'leftUploaded')">
   </label>
-  <span id="fakeUploaded" class="upload-status"></span>
+  <span id="leftUploaded" class="upload-status"></span>
 
-  <label class="custom-upload">Upload Fact Image
-    <input type="file" id="factInput" accept="image/*" onchange="handleUpload('factInput', false, 'factUploaded')">
+  <label class="custom-upload">Upload Right Image
+    <input type="file" id="rightInput" accept="image/*" onchange="handleUpload('rightInput', false, 'rightUploaded')">
   </label>
-  <span id="factUploaded" class="upload-status"></span>
+  <span id="rightUploaded" class="upload-status"></span>
 
   <br>
   <input type="text" id="twitterHandle" placeholder="Enter Twitter handle (e.g. @yourhandle)">
-  <br>
+  
+  <div style="margin: 20px 0;">
+    <label><input type="radio" name="mode" value="factFake" checked> Fake vs Fact</label>
+    <label style="margin-left: 20px;"><input type="radio" name="mode" value="thenNow"> Then vs Now</label>
+  </div>
+
   <button onclick="generateImage()">Generate Combined Image</button>
 
   <div class="preview">
     <div class="img-container">
-      <h2 style="background-color:red;">Fake</h2>
+      <h2 id="leftHeading" style="background-color:red;">Fake</h2>
       <img id="leftPreview">
     </div>
     <div class="img-container">
-      <h2 style="background-color:green;">Fact</h2>
+      <h2 id="rightHeading" style="background-color:green;">Fact</h2>
       <img id="rightPreview">
     </div>
   </div>
@@ -130,53 +131,88 @@
   <div id="result"></div>
 
   <script>
-    let fakeImageSrc = "";
-    let factImageSrc = "";
+    let leftImageSrc = "";
+    let rightImageSrc = "";
 
-    function handleUpload(inputId, isFake, statusId) {
+    function handleUpload(inputId, isLeft, statusId) {
       const fileInput = document.getElementById(inputId);
       const file = fileInput.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = function (e) {
-        if (isFake) {
-          fakeImageSrc = e.target.result;
-          document.getElementById("leftPreview").src = fakeImageSrc;
+        if (isLeft) {
+          leftImageSrc = e.target.result;
+          document.getElementById("leftPreview").src = leftImageSrc;
         } else {
-          factImageSrc = e.target.result;
-          document.getElementById("rightPreview").src = factImageSrc;
+          rightImageSrc = e.target.result;
+          document.getElementById("rightPreview").src = rightImageSrc;
         }
         document.getElementById(statusId).innerText = "✓ Uploaded!";
+        updatePreviewLabels();
       };
       reader.readAsDataURL(file);
     }
 
+    function updatePreviewLabels() {
+      const mode = document.querySelector('input[name="mode"]:checked').value;
+      const leftHeading = document.getElementById("leftHeading");
+      const rightHeading = document.getElementById("rightHeading");
+
+      if (mode === "factFake") {
+        leftHeading.textContent = "Fake";
+        rightHeading.textContent = "Fact";
+        leftHeading.style.backgroundColor = "red";
+        rightHeading.style.backgroundColor = "green";
+      } else {
+        leftHeading.textContent = "Then";
+        rightHeading.textContent = "Now";
+        leftHeading.style.backgroundColor = "gray";
+        rightHeading.style.backgroundColor = "gray";
+      }
+    }
+
+    document.querySelectorAll('input[name="mode"]').forEach(radio => {
+      radio.addEventListener('change', updatePreviewLabels);
+    });
+
     function generateImage() {
+      const mode = document.querySelector('input[name="mode"]:checked').value;
       const twitterHandle = document.getElementById("twitterHandle").value.trim();
-      if (!fakeImageSrc || !factImageSrc) {
+
+      if (!leftImageSrc || !rightImageSrc) {
         alert("Please upload both images.");
         return;
       }
 
-      // Create the wrapper for combined images
       const wrapper = document.createElement("div");
       wrapper.style.position = "relative";
       wrapper.style.display = "flex";
-      wrapper.style.width = "640px";  // Fixed width for combined image
+      wrapper.style.width = "640px";
       wrapper.style.margin = "0 auto";
       wrapper.style.background = "white";
-      wrapper.style.gap = "20px";  // Space between images
+      wrapper.style.gap = "20px";
 
-      // Left box (Fake Image)
-      const leftBox = createImageBox(fakeImageSrc, "Fake", "red", true);
-      wrapper.appendChild(leftBox);
+      let leftLabel = "", rightLabel = "", color = "", addWatermark = false;
 
-      // Right box (Fact Image)
-      const rightBox = createImageBox(factImageSrc, "Fact", "green", false);
-      wrapper.appendChild(rightBox);
+      if (mode === "factFake") {
+        leftLabel = "Fake";
+        rightLabel = "Fact";
+        color = ["red", "green"];
+        addWatermark = true;
+      } else {
+        leftLabel = "Then";
+        rightLabel = "Now";
+        color = ["gray", "gray"];
+        addWatermark = false;
+      }
 
-      // Add Twitter handle watermark in center of the combined image
+      const box1 = createImageBox(leftImageSrc, leftLabel, color[0], addWatermark);
+      const box2 = createImageBox(rightImageSrc, rightLabel, color[1], false);
+
+      wrapper.appendChild(box1);
+      wrapper.appendChild(box2);
+
       if (twitterHandle) {
         const handleMark = document.createElement("div");
         handleMark.textContent = twitterHandle;
@@ -184,7 +220,6 @@
         wrapper.appendChild(handleMark);
       }
 
-      // Append the wrapper to body, render the combined image with html2canvas
       document.body.appendChild(wrapper);
 
       setTimeout(() => {
@@ -205,7 +240,7 @@
           link.onclick = () => {
             const a = document.createElement("a");
             a.href = canvas.toDataURL("image/png");
-            a.download = "fake_vs_fact.png";
+            a.download = mode === "factFake" ? "fake_vs_fact.png" : "then_vs_now.png";
             a.click();
           };
 
